@@ -15,4 +15,5 @@ dependencies = [
     "scipy>=1.16.3",
     "seaborn>=0.13.2",
     "sf-quant>=0.1.16",
+    "statsmodels>=0.14.6",
 ]
