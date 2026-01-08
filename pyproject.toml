@@ -1,0 +1,18 @@
+[project]
+name = "sf-research-reversal"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "altair>=6.0.0",
+    "marimo>=0.18.4",
+    "matplotlib>=3.10.8",
+    "numpy>=2.4.0",
+    "pandas>=2.3.3",
+    "polars>=1.36.1",
+    "python-dotenv>=1.2.1",
+    "scipy>=1.16.3",
+    "seaborn>=0.13.2",
+    "sf-quant>=0.1.16",
+]

@@ -1,0 +1,1 @@
+# Idiosyncratic + vol-scaled + smoothed reversal quantile backtest
