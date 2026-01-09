@@ -22,5 +22,4 @@ if __name__ == "__main__":
     ]
 
     data = get_barra_data(start, end, columns, russell)
-    filtered_data = filter_data(data)
-    print(filtered_data)
+    print(data)
