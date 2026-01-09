@@ -1,1 +1,0 @@
-# Idiosyncratic + vol-scaled + smoothed reversal MVO backtest

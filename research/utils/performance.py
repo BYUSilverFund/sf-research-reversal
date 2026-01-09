@@ -48,7 +48,7 @@ def plot_quintile_portfolio_log_returns(portfolio_returns: pl.DataFrame, signal:
 
     folder = Path(results_path)
     os.makedirs(folder, exist_ok=True)
-    plt.savefig(folder / f"{signal}_plot.png")
+    plt.savefig(folder / f"{signal}_quintile_backtest_plot.png")
     
     return
 
@@ -96,16 +96,16 @@ def construct_mvo_results(weights: pl.DataFrame, signal: str, constraint_type: s
     portfolio_returns = sfp.generate_returns_chart(returns = returns,
                             title=f"{signal} {constraint_type} MVO Backtest",
                             log_scale=True,
-                            file_name=folder / f"{signal}_{constraint_type}_mvo_backtest.png")
+                            file_name=folder / f"{signal}_{constraint_type}_mvo_backtest_plot.png")
     
 
     # generate MVO portolio metrics
-    summary = sfp.generate_summary_table(
+    summary = sfp.generate_returns_summary_table(
         returns = returns
     )
     
     # save and display metrics
-    summary.write_parquet(folder / f"{signal}_{constraint_type}_mvo_backtest_summary.parquet")
+    summary.write_parquet(folder / f"{signal}_{constraint_type}_mvo_backtest.parquet")
 
     print(f'{signal} MVO summary')
     print(summary)
