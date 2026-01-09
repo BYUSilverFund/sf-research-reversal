@@ -69,13 +69,13 @@ def calculate_quintile_summary_stats(port_returns: pl.DataFrame, signal: str, re
     )
 
     # Save metrics
-    stats_df = stats.to_pandas()
+    # stats_df = stats.to_pandas()
     folder = Path(results_path)
     os.makedirs(folder, exist_ok=True)
-    stats_df.to_parquet(folder / f"{signal}_decile_backtest.parquet")
+    stats.write_parquet(folder / f"{signal}_decile_backtest.parquet")
 
     print(f'{signal} Stats')
-    print(stats_df)
+    print(stats)
     print()
 
     return 
