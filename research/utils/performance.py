@@ -13,7 +13,7 @@ import os
 from pathlib import Path
 
 
-def plot_quintile_portfolio_log_returns(portfolio_returns: pl.DataFrame, signal: str, num_bins: pl.Int64, path = str):
+def plot_quintile_portfolio_log_returns(portfolio_returns: pl.DataFrame, signal: str, num_bins: pl.Int64, results_path = str):
 
     # bin numbering
     bins_labels = [str(i) for i in range(num_bins)] + ["spread"]
@@ -46,14 +46,14 @@ def plot_quintile_portfolio_log_returns(portfolio_returns: pl.DataFrame, signal:
     plt.legend()
     # plt.show()
 
-    folder = Path("/home/bwaits/Research/Waits-Research/labs/illiquidity_results")
+    folder = Path(results_path)
     os.makedirs(folder, exist_ok=True)
     plt.savefig(folder / f"{signal}_plot.png")
     
     return
 
 
-def calculate_quintile_summary_stats(port_returns: pl.DataFrame, signal: str, path: str):
+def calculate_quintile_summary_stats(port_returns: pl.DataFrame, signal: str, results_path: str):
     # calculate annualized portfolio metrics for each quintile portfolio
     stats = (
         port_returns
@@ -70,7 +70,7 @@ def calculate_quintile_summary_stats(port_returns: pl.DataFrame, signal: str, pa
 
     # Save metrics
     stats_df = stats.to_pandas()
-    folder = Path("/home/bwaits/Research/Waits-Research/labs/illiquidity_results")
+    folder = Path(results_path)
     os.makedirs(folder, exist_ok=True)
     stats_df.to_parquet(folder / f"{signal}_decile_backtest.parquet")
 
@@ -81,9 +81,9 @@ def calculate_quintile_summary_stats(port_returns: pl.DataFrame, signal: str, pa
     return 
 
 
-def construct_mvo_results(weights: pl.DataFrame, signal: str, constraint_type: str, path: str):
+def construct_mvo_results(weights: pl.DataFrame, signal: str, constraint_type: str, results_path: str):
     
-    folder = Path("/home/bwaits/Research/Waits-Research/labs/illiquidity_results")
+    folder = Path(results_path)
     os.makedirs(folder, exist_ok=True)
 
     # get MVO portfolio returns
