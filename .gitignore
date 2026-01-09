@@ -211,3 +211,5 @@ results/
 alphas/
 weights/
 logs/
+slurm-*.out
+core.*
