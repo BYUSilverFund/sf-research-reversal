@@ -212,3 +212,4 @@ weights/
 logs/
 slurm-*.out
 core.*
+/temp

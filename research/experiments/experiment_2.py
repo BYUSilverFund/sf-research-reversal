@@ -45,7 +45,7 @@ signals = data.sort("barrid", "date").with_columns(
 
 # Filter universe
 filtered = signals.filter(
-    pl.col("price").shift(1).over("barrid").gt(5),
+    pl.col("price").shift(1).over("barrid").gt(price_filter),
     pl.col(signal_name).is_not_null(),
 )
 

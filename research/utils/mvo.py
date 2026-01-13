@@ -1,0 +1,46 @@
+import argparse
+import datetime as dt
+
+import polars as pl
+import sf_quant.backtester as sfb
+import sf_quant.optimizer as sfo
+
+
+def run_backtest_by_year(
+    df: pl.LazyFrame, gamma: float, year: int, output_dir: str
+) -> None:
+    year_start = dt.date(year, 1, 1)
+    year_end = dt.date(year, 12, 31)
+
+    filtered = (
+        df.filter(pl.col("date").is_between(year_start, year_end))
+        .select(["date", "barrid", "alpha", "predicted_beta"])
+        .collect()
+    )
+
+    constraints = [sfo.constraints.ZeroBeta(), sfo.constraints.ZeroInvestment()]
+
+    weights = sfb.backtest_parallel(data=filtered, constraints=constraints, gamma=gamma)
+
+    weights.write_parquet(f"{output_dir}/{year}.parquet")
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description="Run signal weighting on a parquet dataset."
+    )
+
+    parser.add_argument("--data_path", help="Path to parquet file containing the data")
+    parser.add_argument("--gamma", type=float, help="Gamma parameter for MVO")
+    parser.add_argument("--year", type=int, help="Year to process")
+    parser.add_argument("--output_dir", help="Directory to write output parquet file")
+
+    args = parser.parse_args()
+
+    # Load parquet into polars DataFrame
+    df = pl.scan_parquet(args.data_path)
+
+    # Run the signal weights calculation
+    run_backtest_by_year(
+        df=df, gamma=args.gamma, year=args.year, output_dir=args.output_dir
+    )
