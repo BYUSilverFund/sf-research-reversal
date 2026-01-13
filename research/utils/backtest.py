@@ -39,39 +39,39 @@ def run_backtest_parallel(
 
     # Format sbatch_script
     sbatch_script = f"""#!/bin/bash
-    #SBATCH --job-name=reversal_backtest
-    #SBATCH --output=logs/{signal_name}/{gamma}/backtest_%A_%a.out
-    #SBATCH --error=logs/{signal_name}/{gamma}/backtest_%A_%a.err
-    #SBATCH --array=0-{num_years - 1}%31
-    #SBATCH --cpus-per-task={n_cpus}
-    #SBATCH --mem=32G
-    #SBATCH --time=06:00:00
-    #SBATCH --mail-user={byu_email}
-    #SBATCH --mail-type=BEGIN,END,FAIL
+#SBATCH --job-name=reversal_backtest
+#SBATCH --output=logs/{signal_name}/{gamma}/backtest_%A_%a.out
+#SBATCH --error=logs/{signal_name}/{gamma}/backtest_%A_%a.err
+#SBATCH --array=0-{num_years - 1}%31
+#SBATCH --cpus-per-task={n_cpus}
+#SBATCH --mem=32G
+#SBATCH --time=06:00:00
+#SBATCH --mail-user={byu_email}
+#SBATCH --mail-type=BEGIN,END,FAIL
 
-    export RAY_ACCEL_ENV_VAR_OVERRIDE_ON_ZERO=0
+export RAY_ACCEL_ENV_VAR_OVERRIDE_ON_ZERO=0
 
-    DATA_PATH="{data_path}"
-    OUTPUT_DIR="{output_dir}"
-    GAMMA="{gamma}"
-    N_CPUS="{n_cpus}"
-    CONSTRAINTS="{constraints_str}"
+DATA_PATH="{data_path}"
+OUTPUT_DIR="{output_dir}"
+GAMMA="{gamma}"
+N_CPUS="{n_cpus}"
+CONSTRAINTS="{constraints_str}"
 
-    # Years to process
-    years=({years_str})
+# Years to process
+years=({years_str})
 
-    num_years=${{#years[@]}}
+num_years=${{#years[@]}}
 
-    if [ $SLURM_ARRAY_TASK_ID -ge $num_years ]; then
-    echo "Task ID $SLURM_ARRAY_TASK_ID is out of range (max $((num_years-1)))."
-    exit 1
-    fi
+if [ $SLURM_ARRAY_TASK_ID -ge $num_years ]; then
+echo "Task ID $SLURM_ARRAY_TASK_ID is out of range (max $((num_years-1)))."
+exit 1
+fi
 
-    year=${{years[$SLURM_ARRAY_TASK_ID]}}
+year=${{years[$SLURM_ARRAY_TASK_ID]}}
 
-    source {project_root}/.venv/bin/activate
-    echo "Running year=$year"
-    srun python research/utils/mvo.py --data_path "$DATA_PATH" --gamma "$GAMMA" --year "$year" --output_dir "$OUTPUT_DIR" --n_cpus "$N_CPUS" --constraints $CONSTRAINTS
+source {project_root}/.venv/bin/activate
+echo "Running year=$year"
+srun python research/utils/mvo.py --data_path "$DATA_PATH" --gamma "$GAMMA" --year "$year" --output_dir "$OUTPUT_DIR" --n_cpus "$N_CPUS" --constraints $CONSTRAINTS
     """
 
     # Write the script to a temporary file and submit it

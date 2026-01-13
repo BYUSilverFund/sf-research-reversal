@@ -18,7 +18,7 @@ end = dt.date(2024, 12, 31)
 price_filter = 5
 signal_name = "barra_reversal"
 IC = 0.05
-gamma = 400
+gamma = 10
 n_cpus = 8
 constraints = ["ZeroBeta", "ZeroInvestment"]
 
