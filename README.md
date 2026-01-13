@@ -43,5 +43,5 @@ Now all of your files will be formatted on commit (you will need to re-commit af
 
 ## Responsibilities
 - Grant: 1
-- Brandon: 2, 3
-- Andrew: 4, 5, 6, 7, 8
+- Brandon: 2, 3, 5, 7
+- Andrew: 4, 6, 8
