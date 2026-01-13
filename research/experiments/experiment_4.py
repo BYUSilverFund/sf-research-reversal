@@ -4,17 +4,19 @@ import polars as pl
 import sf_quant.data as sfd
 import sf_quant.optimizer as sfo
 from dotenv import load_dotenv
+import great_tables as gt
+from pathlib import Path
 
 
 # Load environment variables
 load_dotenv()
 
 # Parameters
+start = dt.date(2024, 1, 1)
 end = dt.date(2025, 12, 30)
-window = 21
-start = end - dt.timedelta(days=window)
 price_filter = 5
 signal_name = "barra_reversal"
+results_folder = Path("results/experiment_4")
 IC = 0.05
 gamma = 10
 n_cpus = 8
@@ -24,6 +26,9 @@ constraints = [
     sfo.NoBuyingOnMargin(),
     sfo.UnitBeta()
 ]
+
+# Create results folder
+results_folder.mkdir(parents=True, exist_ok=True)
 
 # Get data
 data = sfd.load_assets(
@@ -149,9 +154,27 @@ all_weights = (
         pl.col('total_weight').sub(pl.col('bmk_weight')).alias('active_weight')
     )
     .with_columns(
-        pl.col('total_weight').truediv('bmk_weight').alias('pct_change_bmk')
+        pl.col('total_weight').truediv('bmk_weight').sub(1).alias('pct_change_bmk')
     )
     .sort('total_weight', descending=True)
+    .head(10)
 )
 
-print(all_weights.head(10))
+# Create summary table
+table = (
+    gt.GT(all_weights)
+    .tab_header(title="Barra Reversal Portfolio")
+    .cols_label(
+        date="Date",
+        ticker="Ticker",
+        total_weight="Total Weight",
+        bmk_weight="Benchmark Weight",
+        active_weight="Active Weight",
+        pct_change_bmk="Benchmark Percent Change"
+    )
+    .fmt_percent(["total_weight", "bmk_weight", "active_weight", "pct_change_bmk"], decimals=2)
+    .opt_stylize(style=4, color="gray")
+)
+
+table_path = results_folder / "portfolio.png"
+table.save(table_path, scale=3)

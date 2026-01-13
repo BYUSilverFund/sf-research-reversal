@@ -12,7 +12,7 @@ import great_tables as gt
 start = dt.date(1996, 1, 1)
 end = dt.date(2024, 12, 31)
 signal_name = "barra_reversal"
-gamma = 3
+gamma = 160
 results_folder = Path("results/experiment_3")
 
 # Create results folder
