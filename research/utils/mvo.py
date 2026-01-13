@@ -7,7 +7,7 @@ import sf_quant.optimizer as sfo
 
 
 def run_backtest_by_year(
-    df: pl.LazyFrame, gamma: float, year: int, output_dir: str
+    df: pl.LazyFrame, gamma: float, year: int, output_dir: str, n_cpus: int
 ) -> None:
     year_start = dt.date(year, 1, 1)
     year_end = dt.date(year, 12, 31)
@@ -20,7 +20,9 @@ def run_backtest_by_year(
 
     constraints = [sfo.constraints.ZeroBeta(), sfo.constraints.ZeroInvestment()]
 
-    weights = sfb.backtest_parallel(data=filtered, constraints=constraints, gamma=gamma)
+    weights = sfb.backtest_parallel(
+        data=filtered, constraints=constraints, gamma=gamma, n_cpus=n_cpus
+    )
 
     weights.write_parquet(f"{output_dir}/{year}.parquet")
 
@@ -34,6 +36,7 @@ if __name__ == "__main__":
     parser.add_argument("--gamma", type=float, help="Gamma parameter for MVO")
     parser.add_argument("--year", type=int, help="Year to process")
     parser.add_argument("--output_dir", help="Directory to write output parquet file")
+    parser.add_argument("--n_cpus", type=int, help="Number of cpus to use")
 
     args = parser.parse_args()
 
@@ -42,5 +45,9 @@ if __name__ == "__main__":
 
     # Run the signal weights calculation
     run_backtest_by_year(
-        df=df, gamma=args.gamma, year=args.year, output_dir=args.output_dir
+        df=df,
+        gamma=args.gamma,
+        year=args.year,
+        output_dir=args.output_dir,
+        n_cpus=args.n_cpus,
     )

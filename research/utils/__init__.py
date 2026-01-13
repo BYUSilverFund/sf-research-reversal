@@ -1,4 +1,3 @@
-# Shared code for research
-# - Portfolio check
-# - Backtest code
-# - Performance code
+from .backtest import run_backtest_parallel
+
+__all__ = ["run_backtest_parallel"]

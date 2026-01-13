@@ -92,7 +92,6 @@ chart = (
 
 # Save chart
 chart_path = results_folder / "cumulative_returns.png"
-
 chart.save(chart_path, scale_factor=3)
 
 # Create summary table
