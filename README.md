@@ -22,6 +22,13 @@ CRSP_MONTHLY_TABLE=
 CRSP_EVENTS_TABLE=
 ```
 
+Set up pre-commit by running:
+```bash
+prek install
+```
+
+Now all of your files will be formatted on commit (you will need to re-commit after the formatting).
+
 ## Experiments
 1. Standard reversal quantile backtest
 2. Idiosyncratic + vol-scaled + smoothed reversal quantile backtest

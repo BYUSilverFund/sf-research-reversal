@@ -1,29 +1,24 @@
-import sf_quant.performance as sfp
-
-import polars as pl
-import pandas as pd
-
-import numpy as np
-import statsmodels.formula.api as smf
-
-import seaborn as sns
-import matplotlib.pyplot as plt
-
 import os
 from pathlib import Path
 
+import matplotlib.pyplot as plt
+import numpy as np
+import polars as pl
+import seaborn as sns
+import sf_quant.performance as sfp
 
-def plot_quintile_portfolio_log_returns(portfolio_returns: pl.DataFrame, signal: str, num_bins: pl.Int64, results_path = str):
 
+def plot_quintile_portfolio_log_returns(
+    portfolio_returns: pl.DataFrame, signal: str, num_bins: pl.Int64, results_path=str
+):
     # bin numbering
     bins_labels = [str(i) for i in range(num_bins)] + ["spread"]
 
     # compute cumulative log returns for each portfolio column
     cumulative_portfolio_returns = (
-        portfolio_returns
-        .with_columns([
-            pl.col(c).log1p().cum_sum().alias(c) for c in bins_labels
-        ])
+        portfolio_returns.with_columns(
+            [pl.col(c).log1p().cum_sum().alias(c) for c in bins_labels]
+        )
         .select(["date"] + bins_labels)
         .sort("date")
     )
@@ -31,39 +26,56 @@ def plot_quintile_portfolio_log_returns(portfolio_returns: pl.DataFrame, signal:
     # construct backtest plot
     plt.figure(figsize=(10, 6))
     plot_labels = [str(i) for i in range(num_bins)]
-    colors = sns.color_palette('coolwarm', n_colors=len(plot_labels))
+    colors = sns.color_palette("coolwarm", n_colors=len(plot_labels))
 
     # plot backtests
-    for color, label in zip(colors, plot_labels): # quintile portfolios
-        sns.lineplot(cumulative_portfolio_returns, x='date', y=label, label=label, color = color)
+    for color, label in zip(colors, plot_labels):  # quintile portfolios
+        sns.lineplot(
+            cumulative_portfolio_returns, x="date", y=label, label=label, color=color
+        )
 
     # spread portfolio
-    sns.lineplot(cumulative_portfolio_returns, x='date', y='spread', color = 'black', label='Spread')
+    sns.lineplot(
+        cumulative_portfolio_returns,
+        x="date",
+        y="spread",
+        color="black",
+        label="Spread",
+    )
 
-    # plot labeling and saving figure 
+    # plot labeling and saving figure
     plt.ylabel("Cumulative Log Returns")
-    plt.title(f'Decile Portfolios for {signal}')
+    plt.title(f"Decile Portfolios for {signal}")
     plt.legend()
     # plt.show()
 
     folder = Path(results_path)
     os.makedirs(folder, exist_ok=True)
     plt.savefig(folder / f"{signal}_quintile_backtest_plot.png")
-    
+
     return
 
 
-def calculate_quintile_summary_stats(port_returns: pl.DataFrame, signal: str, results_path: str):
+def calculate_quintile_summary_stats(
+    port_returns: pl.DataFrame, signal: str, results_path: str
+):
     # calculate annualized portfolio metrics for each quintile portfolio
     stats = (
-        port_returns
-        .group_by(f"{signal}_bin")
-        .agg([
-            (pl.col("return").mean() * 252).alias("avg_return_ann"), # annualized returns
-            (pl.col("return").std() * np.sqrt(252)).alias("vol_ann") # annualized volatility
-        ])
+        port_returns.group_by(f"{signal}_bin")
+        .agg(
+            [
+                (pl.col("return").mean() * 252).alias(
+                    "avg_return_ann"
+                ),  # annualized returns
+                (pl.col("return").std() * np.sqrt(252)).alias(
+                    "vol_ann"
+                ),  # annualized volatility
+            ]
+        )
         .with_columns(
-            (pl.col("avg_return_ann") / pl.col("vol_ann")).alias("sharpe_ann") # annualized sharpe
+            (pl.col("avg_return_ann") / pl.col("vol_ann")).alias(
+                "sharpe_ann"
+            )  # annualized sharpe
         )
         .sort(f"{signal}_bin")
     )
@@ -74,15 +86,16 @@ def calculate_quintile_summary_stats(port_returns: pl.DataFrame, signal: str, re
     os.makedirs(folder, exist_ok=True)
     stats.write_parquet(folder / f"{signal}_decile_backtest.parquet")
 
-    print(f'{signal} Stats')
+    print(f"{signal} Stats")
     print(stats)
     print()
 
-    return 
+    return
 
 
-def construct_mvo_results(weights: pl.DataFrame, signal: str, constraint_type: str, results_path: str):
-    
+def construct_mvo_results(
+    weights: pl.DataFrame, signal: str, constraint_type: str, results_path: str
+):
     folder = Path(results_path)
     os.makedirs(folder, exist_ok=True)
 
@@ -90,24 +103,25 @@ def construct_mvo_results(weights: pl.DataFrame, signal: str, constraint_type: s
     returns = sfp.generate_returns_from_weights(weights=weights)
 
     # save backtest results
-    returns.write_parquet(folder / f"{signal}_{constraint_type}_mvo_backtest_data.parquet")
+    returns.write_parquet(
+        folder / f"{signal}_{constraint_type}_mvo_backtest_data.parquet"
+    )
 
     # generate backtest plot
-    portfolio_returns = sfp.generate_returns_chart(returns = returns,
-                            title=f"{signal} {constraint_type} MVO Backtest",
-                            log_scale=True,
-                            file_name=folder / f"{signal}_{constraint_type}_mvo_backtest_plot.png")
-    
+    portfolio_returns = sfp.generate_returns_chart(
+        returns=returns,
+        title=f"{signal} {constraint_type} MVO Backtest",
+        log_scale=True,
+        file_name=folder / f"{signal}_{constraint_type}_mvo_backtest_plot.png",
+    )
 
     # generate MVO portolio metrics
-    summary = sfp.generate_returns_summary_table(
-        returns = returns
-    )
-    
+    summary = sfp.generate_returns_summary_table(returns=returns)
+
     # save and display metrics
     summary.write_parquet(folder / f"{signal}_{constraint_type}_mvo_backtest.parquet")
 
-    print(f'{signal} MVO summary')
+    print(f"{signal} MVO summary")
     print(summary)
     print()
 
@@ -131,7 +145,7 @@ def construct_mvo_results(weights: pl.DataFrame, signal: str, constraint_type: s
 #     # reg = reg.tables[1]
 
 #     model = smf.ols("spread" + x_variables, data=port).fit()
- 
+
 #     ci = model.conf_int()
 #     reg_pd = pd.DataFrame({
 #         "term": model.params.index,
@@ -145,7 +159,7 @@ def construct_mvo_results(weights: pl.DataFrame, signal: str, constraint_type: s
 
 
 #     reg_pl = pl.from_pandas(reg_pd.reset_index(drop=True))
-    
+
 
 #     folder = Path("/home/bwaits/Research/Waits-Research/labs/illiquidity_results")
 #     os.makedirs(folder, exist_ok=True)
@@ -174,7 +188,7 @@ def construct_mvo_results(weights: pl.DataFrame, signal: str, constraint_type: s
 #     # reg = reg.tables[1]
 
 #     model = smf.ols("pnl" + x_variables, data=port).fit()
- 
+
 #     ci = model.conf_int()
 #     reg_pd = pd.DataFrame({
 #         "term": model.params.index,
@@ -188,7 +202,7 @@ def construct_mvo_results(weights: pl.DataFrame, signal: str, constraint_type: s
 
 
 #     reg_pl = pl.from_pandas(reg_pd.reset_index(drop=True))
-    
+
 #     folder = Path("/home/bwaits/Research/Waits-Research/labs/illiquidity_results")
 #     os.makedirs(folder, exist_ok=True)
 #     reg_pl.write_parquet(folder / f"{signal}_zero_beta_factor_regression.parquet")
@@ -207,13 +221,13 @@ def construct_mvo_results(weights: pl.DataFrame, signal: str, constraint_type: s
 
 #     # vector of alpha + residual (same as pnl - risk_component)
 #     alpha_plus_resid = alpha_hat + model.resid
-#     risk_adjusted_pnl = port['pnl'] - risk_component  
+#     risk_adjusted_pnl = port['pnl'] - risk_component
 
 #     # adjusted pnl metrics
 #     adj_df = pd.DataFrame({
 #         'date': port.index,
 #         'alpha_plus_resid': alpha_plus_resid,
-#         'risk_adjusted_pnl': risk_adjusted_pnl,  
+#         'risk_adjusted_pnl': risk_adjusted_pnl,
 #     }).set_index('date')
 
 #     print(adj_df)
@@ -221,5 +235,5 @@ def construct_mvo_results(weights: pl.DataFrame, signal: str, constraint_type: s
 #     # back to Polars and save
 #     adj_pl = pl.from_pandas(adj_df.reset_index())
 #     adj_pl.write_parquet(folder / f"{signal}_alpha_plus_residual_timeseries.parquet")
-    
+
 #     return adj_pl

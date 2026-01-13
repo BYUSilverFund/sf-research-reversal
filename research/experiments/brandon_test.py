@@ -1,5 +1,6 @@
-from research.utils.data_processing import get_barra_data, filter_data
 import datetime as dt
+
+from research.utils.data_processing import get_barra_data
 
 if __name__ == "__main__":
     print("hello world")
@@ -8,17 +9,17 @@ if __name__ == "__main__":
     russell = True
 
     columns = [
-        'date',
-        'barrid',
-        'ticker',
-        'price',
-        'return',
-        'market_cap', 
-        'bid_ask_spread',
-        'daily_volume',
-        'specific_return',
-        'specific_risk',
-        'yield'
+        "date",
+        "barrid",
+        "ticker",
+        "price",
+        "return",
+        "market_cap",
+        "bid_ask_spread",
+        "daily_volume",
+        "specific_return",
+        "specific_risk",
+        "yield",
     ]
 
     data = get_barra_data(start, end, columns, russell)

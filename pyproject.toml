@@ -7,14 +7,19 @@ requires-python = ">=3.13, <3.14"
 dependencies = [
     "altair>=6.0.0",
     "ipykernel>=7.1.0",
-    "marimo>=0.18.4",
+    "marimo>=0.19.2",
     "matplotlib>=3.10.8",
-    "numpy>=2.4.0",
+    "numpy>=2.4.1",
     "pandas>=2.3.3",
-    "polars>=1.36.1",
+    "polars>=1.37.1",
     "python-dotenv>=1.2.1",
-    "scipy>=1.16.3",
+    "scipy>=1.17.0",
     "seaborn>=0.13.2",
-    "sf-quant>=0.1.16",
+    "sf-quant>=0.1.17",
     "statsmodels>=0.14.6",
+]
+
+[dependency-groups]
+dev = [
+    "prek>=0.2.27",
 ]
