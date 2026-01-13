@@ -1,96 +1,104 @@
-import argparse
-import datetime as dt
-import os
-
+import sf_quant.data as sfd
 import polars as pl
-import sf_quant.backtester as sfb
-import sf_quant.optimizer as sfo
+import datetime as dt
 
+import datetime as dt
+from pathlib import Path
 
-def get_signal_weights(
-    df: pl.LazyFrame, signal: str, start, end, n_cpus=8, write=False
-):
-    filtered = (
-        df.filter(
-            (pl.col("date") >= start)
-            & (pl.col("date") <= end)
-            & (pl.col(f"{signal}_alpha").is_not_null())
-        )
-        .select(["date", "barrid", f"{signal}_alpha", "predicted_beta"])
-        .collect()
+import altair as alt
+import great_tables as gt
+
+# Parameters
+start = dt.date(1996, 1, 1)
+end = dt.date(2024, 12, 31)
+signal_name = "barra_reversal"
+gamma = 400
+results_folder = Path("results/experiment_3")
+
+# Create results folder
+results_folder.mkdir(parents=True, exist_ok=True)
+
+# Load MVO weights
+weights = pl.read_parquet(f"weights/{signal_name}/{gamma}/*.parquet")
+
+# Get returns
+returns = (
+    sfd.load_assets(
+        start=start,
+        end=end,
+        columns=[
+            'date',
+            'barrid',
+            'return'
+        ],
+        in_universe=True
     )
-    if filtered.is_empty():
-        print("[WARNING] After filtering, input df was empty.")
-        return None
-
-    # constraints = [
-    #     sfo.constraints.FullInvestment(),
-    #     sfo.constraints.LongOnly(),
-    #     sfo.constraints.NoBuyingOnMargin(),
-    #     sfo.constraints.UnitBeta()
-    # ]
-
-    constraints = [sfo.constraints.ZeroBeta(), sfo.constraints.ZeroInvestment()]
-
-    # weights = sfb.backtest_parallel(filtered.rename({f'{signal}': 'alpha'}), constraints, 400, n_cpus=n_cpus)
-
-    weights = sfb.backtest_parallel(
-        filtered.rename({f"{signal}_alpha": "alpha"}), constraints, 400, n_cpus=n_cpus
+    .sort('date', 'barrid')
+    .select(
+        'date',
+        'barrid',
+        pl.col('return').truediv(100).shift(-1).over('barrid').alias('forward_return')
     )
+)
 
-    # Check nothing terrible has happened before writing
-
-    if weights.is_empty():
-        print(f"[WARNING] {signal} {start}–{end}: weights output is EMPTY")
-
-    else:
-        n_dates = weights.select(pl.col("date")).n_unique()
-        total_weight = weights.select(pl.col("weight")).sum().item()
-        print(
-            f"[INFO] {signal} {start}–{end}: {n_dates} dates, total weight sum = {total_weight:.6f}"
-        )
-
-    if write:
-        weights.write_parquet(
-            f"/home/bwaits/Research/sf-research-reversal/research/experiments/weights/{signal}_zb_zi_weights_{start}_{end}.parquet"
-        )
-
-    return weights
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description="Run signal weighting on a parquet dataset."
+# Compute portfolio returns
+portfolio_returns = (
+    weights
+    .join(
+        other=returns,
+        on=['date', 'barrid'],
+        how='left'
     )
-
-    parser.add_argument("parquet", help="Path to parquet file containing the data")
-    parser.add_argument("signal", help="Signal name (without _alpha suffix)")
-    parser.add_argument("start", help="Start date (YYYY-MM-DD)")
-    parser.add_argument("end", help="End date (YYYY-MM-DD)")
-    parser.add_argument(
-        "--write",
-        action="store_true",
-        help="Write the output parquet with weights to disk",
+    .group_by('date')
+    .agg(
+        pl.col('forward_return').mul(pl.col('weight')).sum().alias('return')
     )
+    .sort('date')
+)
 
-    args = parser.parse_args()
+# Compute cumulative log returns
+cumulative_returns = (
+    portfolio_returns
+    .select('date', pl.col('return').log1p().cum_sum().mul(100).alias('cumulative_return'))
+)
 
-    n_cpus = int(os.environ.get("SLURM_CPUS_PER_TASK", "1"))
-    print(f"Ray: Slurm allocated {n_cpus} CPUs")
-
-    # Parse dates into datetime.date objects
-    start = dt.date.fromisoformat(args.start)
-    print(f"Starting at {start}")
-    end = dt.date.fromisoformat(args.end)
-    print(f"Ending at {end}")
-
-    # Load parquet into polars DataFrame
-    print(f"Loading data from {args.parquet}")
-    df = pl.scan_parquet(args.parquet)
-
-    # Run the signal weights calculation
-    print(f"Starting MVO...")
-    weights = get_signal_weights(
-        df, args.signal, start, end, n_cpus=min(8, n_cpus), write=args.write
+# Plot cumulative log returns
+chart = (
+    alt.Chart(cumulative_returns, title="MVO Backtest Results (Active)")
+    .mark_line()
+    .encode(
+        x=alt.X("date", title=""),
+        y=alt.Y("cumulative_return", title="Cumulative Log Return (%)"),
     )
-    print("Done!")
+    .properties(width=800, height=400)
+)
+
+# Save chart
+chart_path = results_folder / "cumulative_returns.png"
+chart.save(chart_path, scale_factor=3)
+
+# Create summary table
+summary = (
+    portfolio_returns
+    .select(
+        pl.col("return").mean().mul(252).alias("mean_return"),
+        pl.col("return").std().mul(pl.lit(252).sqrt()).alias("volatility"),
+    )
+    .with_columns(pl.col("mean_return").truediv(pl.col("volatility")).alias("sharpe"))
+)
+
+table = (
+    gt.GT(summary)
+    .tab_header(title="MVO Backtest Results (Active)")
+    .cols_label(
+        mean_return="Mean Return",
+        volatility="Volatility",
+        sharpe="Sharpe",
+    )
+    .fmt_percent(["mean_return", "volatility"], decimals=2)
+    .fmt_number("sharpe", decimals=2)
+    .opt_stylize(style=4, color="gray")
+)
+
+table_path = results_folder / "summary_table.png"
+table.save(table_path, scale=3)

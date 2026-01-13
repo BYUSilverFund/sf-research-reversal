@@ -1,65 +1,80 @@
 import datetime as dt
 
 import polars as pl
+import sf_quant.data as sfd
+from dotenv import load_dotenv
 
-from research.utils.data_processing import *
-from research.utils.mvo_backtest import *
-from research.utils.performance import *
+from research.utils import run_backtest_parallel
 
+# Load environment variables
+load_dotenv()
 
-def compute_barra_reversal(data: pl.DataFrame) -> pl.DataFrame:
-    barra_reversal = data.with_columns(
-        (
-            pl.col("specific_return").ewm_mean(span=5, min_samples=5)
-        )  # 5 day exponential average
-        # .truediv((pl.col("specific_risk").rolling_mean(window_size=88, min_samples = 88))) # standardize returns
-        .mul(-1)  # reversal methodology
-        .shift(2)  # shift to make tradeable
-        .over("barrid")
-        .alias("barra_rev")
-    ).sort(["barrid", "date"])
+# Parameters
+# start = dt.date(1996, 1, 1)
+# end = dt.date(2024, 12, 31)
+start = dt.date(2024, 12, 1)
+end = dt.date(2024, 12, 31)
 
-    return barra_reversal
+price_filter = 5
+signal_name = "barra_reversal"
+IC = 0.05
+gamma = 10
+n_cpus = 8
+constraints = ["ZeroBeta", "ZeroInvestment"]
 
-
-if __name__ == "__main__":
-    start = dt.date(1995, 6, 27)
-    end = dt.date(2025, 11, 12)
-
-    # data fields and filtering parameters
-    columns = [
+# Get data
+data = sfd.load_assets(
+    start=start,
+    end=end,
+    columns=[
         "date",
         "barrid",
         "ticker",
         "price",
         "return",
-        "predicted_beta",
-        "market_cap",
-        "bid_ask_spread",
-        "daily_volume",
         "specific_return",
         "specific_risk",
-        "yield",
-    ]
+        "predicted_beta",
+    ],
+    in_universe=True,
+).with_columns(
+    pl.col("return").truediv(100),
+    pl.col("specific_return").truediv(100),
+    pl.col("specific_risk").truediv(100),
+)
 
-    russell = True
-    price_filter = 5
+# Compute signal
+signals = data.sort("barrid", "date").with_columns(
+    pl.col("specific_return")
+    .ewm_mean(span=5, min_samples=5)
+    .mul(-1)
+    .shift(1)
+    .over("barrid")
+    .alias(signal_name)
+)
 
-    # where to save alphas
-    alpha_path = (
-        "/home/bwaits/Research/sf-research-reversal/research/experiments/alphas"
+# Filter universe
+filtered = signals.filter(
+    pl.col("price").shift(1).over("barrid").gt(price_filter),
+    pl.col(signal_name).is_not_null(),
+    pl.col("predicted_beta").is_not_null(),
+    pl.col("specific_risk").is_not_null(),
+)
+
+# Compute alphas
+alphas = (
+    filtered.with_columns(
+        pl.col(signal_name).mul(IC).mul("specific_risk").alias("alpha")
     )
+    .select("date", "barrid", "alpha", "predicted_beta")
+    .sort("date", "barrid")
+)
 
-    data = get_barra_data(start, end, columns, russell)
-    barra_reversal = compute_barra_reversal(data)
-    filtered_barra_reversal = filter_data(barra_reversal, "barra_rev", price_filter)
-
-    signals = ["barra_rev"]
-    signals_str = "_".join(signals)
-
-    for signal in signals:
-        filtered_barra_reversal = compute_alphas(filtered_barra_reversal, signal)
-
-    folder = Path(alpha_path)
-    os.makedirs(folder, exist_ok=True)
-    filtered_barra_reversal.write_parquet(folder / f"{signals_str}.parquet")
+# Run parallelized backtest
+run_backtest_parallel(
+    data=alphas,
+    signal_name=signal_name,
+    constraints=constraints,
+    gamma=gamma,
+    n_cpus=n_cpus,
+)

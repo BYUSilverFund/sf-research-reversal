@@ -207,9 +207,9 @@ marimo/_lsp/
 __marimo__/
 
 # Backtest results
-results/
 alphas/
 weights/
 logs/
 slurm-*.out
 core.*
+/temp
