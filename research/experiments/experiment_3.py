@@ -2,7 +2,6 @@ import datetime as dt
 import os
 import subprocess
 import tempfile
-from pathlib import Path
 
 import polars as pl
 import sf_quant.data as sfd
@@ -84,11 +83,15 @@ output_dir = f"{project_root}/weights/{signal_name}/{gamma}/"
 os.makedirs(temp_dir, exist_ok=True)
 alphas.write_parquet(data_path)
 
+# Create logs directory
+logs_dir = f"logs/{signal_name}/{gamma}"
+os.makedirs(logs_dir, exist_ok=True)
+
 # Format sbatch_script
 sbatch_script = f"""#!/bin/bash
 #SBATCH --job-name=reversal_backtest
-#SBATCH --output=logs/backtest_%A_%a.out
-#SBATCH --error=logs/backtest_%A_%a.err
+#SBATCH --output=logs/{signal_name}/{gamma}/backtest_%A_%a.out
+#SBATCH --error=logs/{signal_name}/{gamma}/backtest_%A_%a.err
 #SBATCH --array=0-{num_years - 1}%31
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=32G
@@ -114,7 +117,7 @@ fi
 
 year=${{years[$SLURM_ARRAY_TASK_ID]}}
 
-source /home/bwaits/Research/sf-research-reversal/.venv/bin/activate
+source {project_root}/.venv/bin/activate
 echo "Running year=$year"
 srun python research/utils/mvo.py --data_path "$DATA_PATH" --gamma "$GAMMA" --year "$year" --output_dir "$OUTPUT_DIR"
 """
