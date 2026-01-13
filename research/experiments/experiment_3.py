@@ -12,7 +12,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Parameters
-start = dt.date(1996, 1, 1)
+# start = dt.date(1996, 1, 1)
+start = dt.date(2022, 1, 1)
 end = dt.date(2024, 12, 31)
 price_filter = 5
 signal_name = "barra_reversal"
@@ -75,11 +76,12 @@ num_years = len(years)
 byu_email = os.getenv("BYU_EMAIL")
 project_root = os.getenv("PROJECT_ROOT")
 years_str = " ".join(str(y) for y in years)
-data_path = f"{project_root}/temp/alphas.parquet"
+temp_dir = f"{project_root}/temp"
+data_path = f"{temp_dir}/alphas.parquet"
 output_dir = f"{project_root}/weights/{signal_name}/{gamma}/"
 
 # Save alphas to temporary directory
-Path(output_dir).parent.mkdir(exist_ok=True, parents=True)
+os.makedirs(temp_dir, exist_ok=True)
 alphas.write_parquet(data_path)
 
 # Format sbatch_script
