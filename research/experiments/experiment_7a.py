@@ -15,9 +15,6 @@ load_dotenv()
 # Parameters
 start = dt.date(1996, 1, 1)
 end = dt.date(2024, 12, 31)
-# start = dt.date(2024, 12, 1)
-# end = dt.date(2024, 12, 31)
-
 price_filter = 5
 signal_name = "barra_reversal_volume"
 IC = 0.05
@@ -83,7 +80,9 @@ scores = filtered.select(
 
 # compute time-series z-score for the dollar volume of each security
 volume_scores = (
-    scores.with_columns(
+    scores
+    .sort('date', 'barrid')
+    .with_columns(
         dollar_volume=pl.col("daily_volume").mul(
             pl.col("price")
         )  # calculate dollar volume (I dont think this is necessary actually)

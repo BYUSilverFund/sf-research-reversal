@@ -15,8 +15,6 @@ load_dotenv()
 # Parameters
 start = dt.date(1996, 1, 1)
 end = dt.date(2024, 12, 31)
-# start = dt.date(2024, 12, 1)
-# end = dt.date(2024, 12, 31)
 
 price_filter = 5
 signal_name = "barra_reversal_clipped"
@@ -79,7 +77,7 @@ scores = filtered.select(
 
 # clip the scores to elimate reversal signals that are too strong
 scores = scores.with_columns(
-    pl.col("score").clip(lower_bound=-2.0, upper_bound=2.0).alias("score")
+    pl.col("score").clip(lower_bound=-2.0, upper_bound=2.0)
 )
 
 # Compute alphas

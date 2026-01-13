@@ -12,9 +12,8 @@ from pathlib import Path
 load_dotenv()
 
 # Parameters
+start = dt.date(2024, 1, 1)
 end = dt.date(2025, 12, 30)
-window = 21
-start = end - dt.timedelta(days=window)
 price_filter = 5
 signal_name = "barra_reversal"
 results_folder = Path("results/experiment_4")
