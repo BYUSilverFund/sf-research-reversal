@@ -3,6 +3,7 @@ import datetime as dt
 import polars as pl
 import sf_quant.data as sfd
 from dotenv import load_dotenv
+
 from research.utils import run_backtest_parallel
 
 # Load environment variables
@@ -19,10 +20,7 @@ signal_name = "barra_reversal"
 IC = 0.05
 gamma = 400
 n_cpus = 8
-constraints = [
-    'zero_beta',
-    'zero_investment'
-]
+constraints = ["ZeroBeta", "ZeroInvestment"]
 
 # Get data
 data = sfd.load_assets(
@@ -78,5 +76,5 @@ run_backtest_parallel(
     signal_name=signal_name,
     constraints=constraints,
     gamma=gamma,
-    n_cpus=n_cpus
+    n_cpus=n_cpus,
 )

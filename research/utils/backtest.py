@@ -1,15 +1,20 @@
-import datetime as dt
 import os
 import subprocess
 import tempfile
 
 import polars as pl
-import sf_quant.data as sfd
 from dotenv import load_dotenv
 
 load_dotenv()
 
-def run_backtest_parallel(data: pl.DataFrame, signal_name: str, constraints: list[str], gamma: float, n_cpus: int):
+
+def run_backtest_parallel(
+    data: pl.DataFrame,
+    signal_name: str,
+    constraints: list[str],
+    gamma: float,
+    n_cpus: int,
+):
     # Get unique years from the alphas data
     years = sorted(data.select(pl.col("date").dt.year()).unique().to_series().to_list())
     num_years = len(years)
@@ -18,6 +23,7 @@ def run_backtest_parallel(data: pl.DataFrame, signal_name: str, constraints: lis
     byu_email = os.getenv("BYU_EMAIL")
     project_root = os.getenv("PROJECT_ROOT")
     years_str = " ".join(str(y) for y in years)
+    constraints_str = " ".join(constraints)
     temp_dir = f"{project_root}/temp"
     data_path = f"{temp_dir}/alphas.parquet"
     output_dir = f"{project_root}/weights/{signal_name}/{gamma}"
@@ -49,6 +55,7 @@ def run_backtest_parallel(data: pl.DataFrame, signal_name: str, constraints: lis
     OUTPUT_DIR="{output_dir}"
     GAMMA="{gamma}"
     N_CPUS="{n_cpus}"
+    CONSTRAINTS="{constraints_str}"
 
     # Years to process
     years=({years_str})
@@ -64,7 +71,7 @@ def run_backtest_parallel(data: pl.DataFrame, signal_name: str, constraints: lis
 
     source {project_root}/.venv/bin/activate
     echo "Running year=$year"
-    srun python research/utils/mvo.py --data_path "$DATA_PATH" --gamma "$GAMMA" --year "$year" --output_dir "$OUTPUT_DIR" --n_cpus "$N_CPUS"
+    srun python research/utils/mvo.py --data_path "$DATA_PATH" --gamma "$GAMMA" --year "$year" --output_dir "$OUTPUT_DIR" --n_cpus "$N_CPUS" --constraints $CONSTRAINTS
     """
 
     # Write the script to a temporary file and submit it
