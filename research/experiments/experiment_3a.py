@@ -10,15 +10,13 @@ from research.utils import run_backtest_parallel
 load_dotenv()
 
 # Parameters
-# start = dt.date(1996, 1, 1)
-# end = dt.date(2024, 12, 31)
-start = dt.date(2024, 12, 1)
+start = dt.date(1996, 1, 1)
 end = dt.date(2024, 12, 31)
 
 price_filter = 5
 signal_name = "barra_reversal"
 IC = 0.05
-gamma = 10
+gamma = 3
 n_cpus = 8
 constraints = ["ZeroBeta", "ZeroInvestment"]
 
@@ -61,10 +59,22 @@ filtered = signals.filter(
     pl.col("specific_risk").is_not_null(),
 )
 
+# Compute scores
+scores = (
+    filtered
+    .select(
+        'date',
+        'barrid',
+        'predicted_beta',
+        'specific_risk',
+        pl.col(signal_name).sub(pl.col(signal_name).mean()).truediv(pl.col(signal_name).std()).over('date').alias('score'),
+    )
+)
+
 # Compute alphas
 alphas = (
-    filtered.with_columns(
-        pl.col(signal_name).mul(IC).mul("specific_risk").alias("alpha")
+    scores.with_columns(
+        pl.col('score').mul(IC).mul("specific_risk").alias("alpha")
     )
     .select("date", "barrid", "alpha", "predicted_beta")
     .sort("date", "barrid")
