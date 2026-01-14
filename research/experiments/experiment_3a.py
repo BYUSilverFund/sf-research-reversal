@@ -103,9 +103,19 @@ ics = sfp.generate_alpha_ics(
 )
 
 # Save ic chart
-chart_path = results_folder / "ic_chart.png"
+rank_chart_path = results_folder / "rank_ic_chart.png"
+pearson_chart_path = results_folder / "pearson_ic_chart.png"
 sfp.generate_ic_chart(
-    ics=ics, title="Barra Reversal Cumulative IC", ic_type="Rank", file_name=chart_path
+    ics=ics,
+    title="Barra Reversal Cumulative IC",
+    ic_type="Rank",
+    file_name=rank_chart_path,
+)
+sfp.generate_ic_chart(
+    ics=ics,
+    title="Barra Reversal Cumulative IC",
+    ic_type="Pearson",
+    file_name=pearson_chart_path,
 )
 
 # Run parallelized backtest
