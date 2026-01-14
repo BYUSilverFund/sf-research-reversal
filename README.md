@@ -43,7 +43,6 @@ Now all of your files will be formatted on commit (you will need to re-commit af
 9. Standard reversal MVO backtest
 10. Standard reversal portfolio check
 11. Quantile regression of idiosyncratic + vol-scaled + smoothed reversal signal vs. returns
-12. 
 
 ## To do
 - Experiments 9 and 10
