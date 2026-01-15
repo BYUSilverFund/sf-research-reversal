@@ -53,3 +53,10 @@ Now all of your files will be formatted on commit (you will need to re-commit af
 - Grant: 1
 - Brandon: 2, 5, 7
 - Andrew: 3, 4, 6, 8, 9, 10, 11
+
+## Interactive Results
+To run the marimo notebook:
+
+```bash
+marimo edit notebook.py
+```
