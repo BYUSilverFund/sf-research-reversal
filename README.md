@@ -52,7 +52,7 @@ Now all of your files will be formatted on commit (you will need to re-commit af
 
 ## Responsibilities
 - Grant: 1
-- Brandon: 2, 5, 7
+- Brandon: 2, 5, 7, 12, 13
 - Andrew: 3, 4, 6, 8, 9, 10, 11
 
 ## Interactive Results
