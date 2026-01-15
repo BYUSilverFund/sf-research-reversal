@@ -5,6 +5,7 @@ import altair as alt
 import great_tables as gt
 import polars as pl
 import sf_quant.data as sfd
+import statsmodels.formula.api as smf
 
 # Parameters
 start = dt.date(1996, 1, 1)
@@ -81,3 +82,44 @@ table = (
 
 table_path = results_folder / "summary_table.png"
 table.save(table_path, scale=3)
+
+# Fama french regression
+ff5 = (
+    sfd.load_fama_french(start=start, end=end)
+    .sort("date")
+    .with_columns(pl.exclude("date").shift(-1))
+)
+
+regression_data = (
+    portfolio_returns.join(other=ff5, on="date", how="left")
+    .drop_nulls("return")
+    .with_columns(pl.col("return").sub("rf").alias("return_rf"))
+    .with_columns(pl.exclude("date").mul(100))
+)
+
+formula = "return_rf ~ mkt_rf + smb + hml + rmw + cma"
+model = smf.ols(formula, regression_data)
+results = model.fit()
+
+regression_summary = pl.DataFrame(
+    {
+        "variable": results.params.index,
+        "coefficient": results.params.values,
+        "tstat": results.tvalues.values,
+    }
+)
+
+regression_table = (
+    gt.GT(regression_summary)
+    .tab_header(title="MVO Backtest Results (Active) (Daily %)")
+    .cols_label(
+        variable="Variable",
+        coefficient="Coefficient",
+        tstat="T-stat",
+    )
+    .fmt_number(["coefficient", "tstat"], decimals=4)
+    .opt_stylize(style=4, color="gray")
+)
+
+table_path = results_folder / "regression_table.png"
+regression_table.save(table_path, scale=3)
