@@ -17,8 +17,8 @@ load_dotenv()
 start = dt.date(2022, 1, 1)
 end = dt.date(2025, 12, 30)
 price_filter = 5
-signal_name = "barra_reversal_volume"
-results_folder = Path("results/experiment_8")
+signal_name = "barra_reversal_volume_clipped"
+results_folder = Path("results/experiment_13")
 IC = 0.05
 gamma = 10
 n_cpus = 8
@@ -88,6 +88,9 @@ scores = filtered.select(
     .alias("score"),
 )
 
+# windsorize scores
+scores = scores.with_columns(pl.col("score").clip(lower_bound=-2.0, upper_bound=2.0))
+
 volume_scores = (
     scores.sort(["barrid", "date"])
     .with_columns(dollar_volume=pl.col("daily_volume").mul(pl.col("price")).log1p())
@@ -138,7 +141,7 @@ alphas = (
     )
     .with_columns(
         # Set alpha to 0 if both score > 2 and volume_score > 2
-        alpha=pl.when((pl.col("score") > 2.0) & (pl.col("volume_score") > 2.0))
+        alpha=pl.when((pl.col("score").eq(2.0)) & (pl.col("volume_score") > 2.0))
         .then(0.0)
         .otherwise(pl.col("gk_alpha"))
     )
