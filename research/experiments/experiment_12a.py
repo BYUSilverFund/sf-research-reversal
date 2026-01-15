@@ -16,9 +16,9 @@ load_dotenv()
 start = dt.date(1996, 1, 1)
 end = dt.date(2024, 12, 31)
 price_filter = 5
-signal_name = "barra_reversal_volume"
+signal_name = "barra_reversal_volume_clipped"
 IC = 0.05
-gamma = 130
+gamma = 150
 n_cpus = 8
 constraints = ["ZeroBeta", "ZeroInvestment"]
 
@@ -77,6 +77,8 @@ scores = filtered.select(
     .alias("score"),
 )
 
+# windsorize scores
+scores = scores.with_columns(pl.col("score").clip(lower_bound=-2.0, upper_bound=2.0))
 
 volume_scores = (
     scores.sort(["barrid", "date"])
@@ -104,7 +106,6 @@ volume_scores = (
     )
 )
 
-
 # Compute alphas with conditional logic: Set alpha to 0 if reversal is high with strong volume
 alphas = (
     volume_scores.with_columns(
@@ -113,7 +114,7 @@ alphas = (
     )
     .with_columns(
         # Set alpha to 0 if both score > 2 and volume_score > 2
-        alpha=pl.when((pl.col("score") > 2.0) & (pl.col("volume_score") > 2.0))
+        alpha=pl.when((pl.col("score").eq(2.0)) & (pl.col("volume_score").ge(2.0)))
         .then(0.0)
         .otherwise(pl.col("gk_alpha"))
     )
