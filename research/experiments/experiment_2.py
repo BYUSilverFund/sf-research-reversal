@@ -27,11 +27,10 @@ data = sfd.load_assets(
         "barrid",
         "ticker",
         "price",
-        "return",
         "specific_return",
     ],
     in_universe=True,
-).with_columns(pl.col("return").truediv(100), pl.col("specific_return").truediv(100))
+).with_columns(pl.col("specific_return").truediv(100))
 
 # Compute signal
 signals = data.sort("barrid", "date").with_columns(
@@ -58,10 +57,15 @@ portfolios = filtered.with_columns(
 # Compute portfolio returns
 returns = (
     portfolios.group_by("date", "bin")
-    .agg(pl.col("return").mean())
-    .pivot(on="bin", index="date", values="return")
+    .agg(pl.col("specific_return").mean())
+    .pivot(on="bin", index="date", values="specific_return")
     .with_columns(pl.col(str(num_bins - 1)).sub(pl.col("0")).alias("spread"))
-    .unpivot(index="date", variable_name="bin", value_name="return")
+    .unpivot(index="date", variable_name="bin", value_name="specific_return")
+    .with_columns(
+        pl.col("specific_return")
+        .truediv(pl.col("specific_return").std().mul(317))
+        .over("bin")
+    )
     .sort("date", "bin")
 )
 
@@ -69,7 +73,12 @@ returns = (
 cumulative_returns = returns.sort("date", "bin").select(
     "date",
     "bin",
-    pl.col("return").log1p().cum_sum().mul(100).over("bin").alias("cumulative_return"),
+    pl.col("specific_return")
+    .log1p()
+    .cum_sum()
+    .mul(100)
+    .over("bin")
+    .alias("cumulative_return"),
 )
 
 # Plot cumulative log returns
@@ -98,8 +107,8 @@ chart.save(chart_path, scale_factor=3)
 summary = (
     returns.group_by("bin")
     .agg(
-        pl.col("return").mean().mul(252).alias("mean_return"),
-        pl.col("return").std().mul(pl.lit(252).sqrt()).alias("volatility"),
+        pl.col("specific_return").mean().mul(252).alias("mean_return"),
+        pl.col("specific_return").std().mul(pl.lit(252).sqrt()).alias("volatility"),
     )
     .with_columns(pl.col("mean_return").truediv(pl.col("volatility")).alias("sharpe"))
     .sort("bin", descending=True)
