@@ -6,6 +6,7 @@ import great_tables as gt
 import polars as pl
 import seaborn as sns
 import sf_quant.data as sfd
+import statsmodels.formula.api as smf
 
 # Parameters
 start = dt.date(1996, 1, 1)
@@ -132,3 +133,66 @@ table = (
 
 table_path = results_folder / "summary_table.png"
 table.save(table_path, scale=3)
+
+# Fama french regression
+ff5 = (
+    sfd.load_fama_french(start=start, end=end)
+    .sort("date")
+    .with_columns(pl.exclude("date").shift(-1))
+)
+
+regression_data = (
+    returns.join(other=ff5, on="date", how="left")
+    .drop_nulls("specific_return")
+    .with_columns(pl.col("specific_return").sub("rf").alias("specific_return_rf"))
+    .with_columns(pl.exclude("date", "bin").mul(100))
+)
+
+bins = labels + ["spread"]
+regression_summary_list = []
+for bin in bins:
+    regression_data_slice = regression_data.filter(pl.col("bin").eq(bin))
+    formula = "specific_return_rf ~ mkt_rf + smb + hml + rmw + cma"
+    model = smf.ols(formula, regression_data_slice)
+    results = model.fit()
+
+    regression_summary = pl.DataFrame(
+        {
+            "variable": results.params.index,
+            "coefficient": results.params.values,
+            "tstat": results.tvalues.values,
+        }
+    ).with_columns(pl.lit(bin).alias("bin"))
+
+    regression_summary_list.append(regression_summary)
+
+regression_summary = (
+    pl.concat(regression_summary_list)
+    .sort("bin")
+    .pivot(index="bin", on="variable", values=["coefficient", "tstat"])
+)
+
+regression_table = (
+    gt.GT(regression_summary)
+    .tab_header(title="MVO Backtest Results (Active) (Daily %)")
+    .cols_label(
+        bin="Portfolio",
+        coefficient_Intercept="Intercept Coef.",
+        coefficient_mkt_rf="MKT Coef.",
+        coefficient_smb="SMB Coef.",
+        coefficient_hml="HML Coef.",
+        coefficient_rmw="RMW Coef.",
+        coefficient_cma="CMA Coef.",
+        tstat_Intercept="Intercept T-stat",
+        tstat_mkt_rf="MKT T-stat",
+        tstat_smb="SMB T-stat",
+        tstat_hml="HML T-stat",
+        tstat_rmw="RMW T-stat",
+        tstat_cma="CMA T-stat",
+    )
+    .fmt_number(pl.exclude("bin"), decimals=4)
+    .opt_stylize(style=4, color="gray")
+)
+
+table_path = results_folder / "regression_table.png"
+regression_table.save(table_path, scale=3)
