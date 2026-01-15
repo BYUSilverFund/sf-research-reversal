@@ -58,14 +58,16 @@ portfolios = filtered.with_columns(
 returns = (
     portfolios.group_by("date", "bin")
     .agg(pl.col("specific_return").mean())
+    .with_columns(
+        pl.col("specific_return")
+        .truediv(
+            pl.col("specific_return").std().mul(317)
+        )  # Scale volatility to 5%: sqrt(252) / 5 = 3.17
+        .over("bin")
+    )
     .pivot(on="bin", index="date", values="specific_return")
     .with_columns(pl.col(str(num_bins - 1)).sub(pl.col("0")).alias("spread"))
     .unpivot(index="date", variable_name="bin", value_name="specific_return")
-    .with_columns(
-        pl.col("specific_return")
-        .truediv(pl.col("specific_return").std().mul(317))
-        .over("bin")
-    )
     .sort("date", "bin")
 )
 
