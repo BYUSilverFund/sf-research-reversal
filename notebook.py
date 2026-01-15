@@ -36,8 +36,8 @@ def _(mo):
     )
 
     signal_names = mo.ui.multiselect(
-        value=["reversal", "barra_reversal"],
-        options=["reversal", "barra_reversal"],
+        value=["reversal", "barra_reversal", "barra_reversal_clipped"],
+        options=["reversal", "barra_reversal", "barra_reversal_clipped"],
         label="Select signals",
     )
 
@@ -48,7 +48,9 @@ def _(mo):
 @app.cell
 def _(end, pl, signal_names, start):
     gammas = [
-        {"reversal": 160, "barra_reversal": 160}[signal_name]
+        {"reversal": 160, "barra_reversal": 160, "barra_reversal_clipped": 130}[
+            signal_name
+        ]
         for signal_name in signal_names.value
     ]
 
