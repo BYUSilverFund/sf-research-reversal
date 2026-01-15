@@ -45,12 +45,11 @@ Now all of your files will be formatted on commit (you will need to re-commit af
 11. Quantile regression of idiosyncratic + vol-scaled + smoothed reversal signal vs. returns
 
 ## To do
-- Experiments 9 and 10
-- Add FF5 regressions to 1, 2, 5, 7, 9
-- Add IC chart to 5, 7, 9
-- Add vol- and beta- adjusted backtests to 1 and 2
+- Add FF5 regressions to 1, 2, 5, 7
+- Add IC chart to 5, 7
+- Add vol- and beta- adjusted backtests to 1
 
 ## Responsibilities
 - Grant: 1
-- Brandon: 2, 5, 7, 9, 10
-- Andrew: 3, 4, 6, 8, 11
+- Brandon: 2, 5, 7
+- Andrew: 3, 4, 6, 8, 9, 10, 11
