@@ -174,7 +174,7 @@ regression_summary = (
 
 regression_table = (
     gt.GT(regression_summary)
-    .tab_header(title="MVO Backtest Results (Active) (Daily %)")
+    .tab_header(title="Quantile Backtest Results (Daily %)")
     .cols_label(
         bin="Portfolio",
         coefficient_Intercept="Intercept Coef.",
