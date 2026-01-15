@@ -22,6 +22,9 @@ n_cpus = 8
 constraints = ["ZeroBeta", "ZeroInvestment"]
 results_folder = Path("results/experiment_3")
 
+# Create results folder
+results_folder.mkdir(parents=True, exist_ok=True)
+
 # Get data
 data = sfd.load_assets(
     start=start,

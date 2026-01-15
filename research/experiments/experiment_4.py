@@ -1,12 +1,12 @@
 import datetime as dt
+from pathlib import Path
 
+import great_tables as gt
+import numpy as np
 import polars as pl
 import sf_quant.data as sfd
 import sf_quant.optimizer as sfo
 from dotenv import load_dotenv
-import great_tables as gt
-from pathlib import Path
-
 
 # Load environment variables
 load_dotenv()
@@ -18,13 +18,13 @@ price_filter = 5
 signal_name = "barra_reversal"
 results_folder = Path("results/experiment_4")
 IC = 0.05
-gamma = 10
+gamma = 15
 n_cpus = 8
 constraints = [
     sfo.FullInvestment(),
     sfo.LongOnly(),
     sfo.NoBuyingOnMargin(),
-    sfo.UnitBeta()
+    sfo.UnitBeta(),
 ]
 
 # Create results folder
@@ -67,38 +67,37 @@ filtered = signals.filter(
     pl.col(signal_name).is_not_null(),
     pl.col("predicted_beta").is_not_null(),
     pl.col("specific_risk").is_not_null(),
-    pl.col('date').eq(end)
+    pl.col("date").eq(end),
 )
 
 # Compute scores
-scores = (
-    filtered
-    .select(
-        'date',
-        'barrid',
-        'predicted_beta',
-        'specific_risk',
-        pl.col(signal_name).sub(pl.col(signal_name).mean()).truediv(pl.col(signal_name).std()).over('date').alias('score'),
-    )
+scores = filtered.select(
+    "date",
+    "barrid",
+    "predicted_beta",
+    "specific_risk",
+    pl.col(signal_name)
+    .sub(pl.col(signal_name).mean())
+    .truediv(pl.col(signal_name).std())
+    .over("date")
+    .alias("score"),
 )
 
 # Compute alphas
 alphas = (
-    scores.with_columns(
-        pl.col('score').mul(IC).mul("specific_risk").alias("alpha")
-    )
+    scores.with_columns(pl.col("score").mul(IC).mul("specific_risk").alias("alpha"))
     .select("date", "barrid", "alpha", "predicted_beta")
     .sort("date", "barrid")
 )
 
 # Set up mean variance optimization
-alphas_np = alphas['alpha'].to_numpy()
-betas_np = alphas['predicted_beta'].to_numpy()
-barrids = alphas['barrid'].to_list()
+alphas_np = alphas["alpha"].to_numpy()
+betas_np = alphas["predicted_beta"].to_numpy()
+barrids = alphas["barrid"].to_list()
 
 # Get covariance matrix
 covariance_matrix = sfd.construct_covariance_matrix(date_=end, barrids=barrids)
-covariance_matrix_np = covariance_matrix.drop('barrid').to_numpy()
+covariance_matrix_np = covariance_matrix.drop("barrid").to_numpy()
 
 # Get optimal weights
 weights = sfo.mve_optimizer(
@@ -107,62 +106,52 @@ weights = sfo.mve_optimizer(
     covariance_matrix=covariance_matrix_np,
     constraints=constraints,
     gamma=gamma,
-    betas=betas_np
+    betas=betas_np,
 )
 
 # Get benchmark weights
-benchmark_weights = (
-    sfd.load_benchmark(
-        start=start,
-        end=end
-    )
-    .filter(
-        pl.col('date').eq(end)
-    )
+benchmark_weights = sfd.load_benchmark(start=start, end=end).filter(
+    pl.col("date").eq(end)
 )
 
 # Get ticker mapping
 tickers = sfd.load_assets_by_date(
-    date_=end,
-    in_universe=True,
-    columns=['barrid', 'ticker']
+    date_=end, in_universe=True, columns=["barrid", "ticker"]
 )
 
 # Compute active weights and pct_change_bmk
 all_weights = (
-    benchmark_weights
-    .rename({'weight': 'bmk_weight'})
-    .join(
-        other=weights.rename({'weight': 'total_weight'}),
-        on=['barrid'],
-        how='left'
-    )
-    .join(
-        other=tickers,
-        on=['barrid'],
-        how='left'
-    )
-    .with_columns(
-        pl.col('total_weight').fill_null(0)
-    )
+    benchmark_weights.rename({"weight": "bmk_weight"})
+    .join(other=weights.rename({"weight": "total_weight"}), on=["barrid"], how="left")
+    .join(other=tickers, on=["barrid"], how="left")
+    .with_columns(pl.col("total_weight").fill_null(0))
     .select(
-        'date',
-        'ticker',
-        'barrid',
-        'total_weight',
-        'bmk_weight',
-        pl.col('total_weight').sub(pl.col('bmk_weight')).alias('active_weight')
+        "date",
+        "ticker",
+        "barrid",
+        "total_weight",
+        "bmk_weight",
+        pl.col("total_weight").sub(pl.col("bmk_weight")).alias("active_weight"),
     )
     .with_columns(
-        pl.col('total_weight').truediv('bmk_weight').sub(1).alias('pct_change_bmk')
+        pl.col("total_weight").truediv("bmk_weight").sub(1).alias("pct_change_bmk")
     )
-    .sort('total_weight', descending=True)
-    .head(10)
+    .sort("total_weight", descending=True)
 )
+
+active_weights_np = all_weights.sort("barrid")["active_weight"].to_numpy()
+barrids = all_weights.sort("barrid")["barrid"].to_list()
+
+# Get covariance matrix
+covariance_matrix = sfd.construct_covariance_matrix(date_=end, barrids=barrids)
+covariance_matrix_np = covariance_matrix.drop("barrid").to_numpy()
+
+active_risk = np.sqrt(active_weights_np @ covariance_matrix_np @ active_weights_np.T)
+print(f"Active Risk: {active_risk * 100:.2}%")
 
 # Create summary table
 table = (
-    gt.GT(all_weights)
+    gt.GT(all_weights.head(10))
     .tab_header(title="Barra Reversal Portfolio")
     .cols_label(
         date="Date",
@@ -170,9 +159,11 @@ table = (
         total_weight="Total Weight",
         bmk_weight="Benchmark Weight",
         active_weight="Active Weight",
-        pct_change_bmk="Benchmark Percent Change"
+        pct_change_bmk="Benchmark Percent Change",
     )
-    .fmt_percent(["total_weight", "bmk_weight", "active_weight", "pct_change_bmk"], decimals=2)
+    .fmt_percent(
+        ["total_weight", "bmk_weight", "active_weight", "pct_change_bmk"], decimals=2
+    )
     .opt_stylize(style=4, color="gray")
 )
 
