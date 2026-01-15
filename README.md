@@ -47,11 +47,7 @@ Now all of your files will be formatted on commit (you will need to re-commit af
 ## To do
 - Experiments 9 and 10
 - Add FF5 regressions to 1, 2, 5, 7, 9
-<<<<<<< HEAD
-- Add IC chart to 3, 5, 7, 9
-=======
 - Add IC chart to 5, 7, 9
->>>>>>> main
 - Add vol- and beta- adjusted backtests to 1 and 2
 
 ## Responsibilities
