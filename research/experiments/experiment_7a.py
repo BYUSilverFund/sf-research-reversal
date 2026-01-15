@@ -80,8 +80,7 @@ scores = filtered.select(
 
 # compute time-series z-score for the dollar volume of each security
 volume_scores = (
-    scores
-    .sort('date', 'barrid')
+    scores.sort("date", "barrid")
     .with_columns(
         dollar_volume=pl.col("daily_volume").mul(
             pl.col("price")
@@ -97,11 +96,16 @@ volume_scores = (
     )
     .with_columns(
         pl.col("dollar_volume")
-        .sub(pl.col("dollar_volume").mean())
-        .truediv(pl.col("dollar_volume").std())
+        .sub(pl.col("dollar_volume_mean"))
+        .truediv(pl.col("dollar_volume_std"))
         .over("barrid")
         .alias("volume_score"),
     )
+    # .with_columns(
+    #     volume_score=pl.col("volume_score")
+    #         .ewm_mean(span=3, ignore_nulls=True)
+    #         .over("barrid")
+    # )
     .sort(["barrid", "date"])
 )
 
