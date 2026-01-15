@@ -9,6 +9,8 @@ import sf_quant.data as sfd
 import sf_quant.performance as sfp
 from dotenv import load_dotenv
 
+from research.utils import run_backtest_parallel
+
 # Load environment variables
 load_dotenv()
 
@@ -160,11 +162,11 @@ sfp.generate_ic_chart(
 )
 
 
-# # Run parallelized backtest
-# run_backtest_parallel(
-#     data=alphas,
-#     signal_name=signal_name,
-#     constraints=constraints,
-#     gamma=gamma,
-#     n_cpus=n_cpus,
-# )
+# Run parallelized backtest
+run_backtest_parallel(
+    data=alphas,
+    signal_name=signal_name,
+    constraints=constraints,
+    gamma=gamma,
+    n_cpus=n_cpus,
+)
