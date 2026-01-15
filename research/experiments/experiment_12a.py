@@ -2,12 +2,12 @@
 # Volume conditioned MVO backtest
 
 import datetime as dt
+from pathlib import Path
 
 import polars as pl
 import sf_quant.data as sfd
+import sf_quant.performance as sfp
 from dotenv import load_dotenv
-
-from research.utils import run_backtest_parallel
 
 # Load environment variables
 load_dotenv()
@@ -21,6 +21,7 @@ IC = 0.05
 gamma = 150
 n_cpus = 8
 constraints = ["ZeroBeta", "ZeroInvestment"]
+results_folder = Path("results/experiment_12")
 
 # Get data
 data = sfd.load_assets(
@@ -123,11 +124,48 @@ alphas = (
 )
 
 
-# Run parallelized backtest
-run_backtest_parallel(
-    data=alphas,
-    signal_name=signal_name,
-    constraints=constraints,
-    gamma=gamma,
-    n_cpus=n_cpus,
+# Get forward returns
+forward_returns = (
+    data.sort("date", "barrid")
+    .select(
+        "date", "barrid", pl.col("return").shift(-1).over("barrid").alias("fwd_return")
+    )
+    .drop_nulls("fwd_return")
 )
+
+# Merge alphas and forward returns
+merged = alphas.join(other=forward_returns, on=["date", "barrid"], how="inner")
+
+# Get merged alphas and forward returns (inner join)
+merged_alphas = merged.select("date", "barrid", "alpha")
+merged_forward_returns = merged.select("date", "barrid", "fwd_return")
+
+# Get ics
+ics = sfp.generate_alpha_ics(
+    alphas=alphas, rets=forward_returns, method="rank", window=22
+)
+
+# Save ic chart
+rank_chart_path = results_folder / "rank_ic_chart.png"
+pearson_chart_path = results_folder / "pearson_ic_chart.png"
+sfp.generate_ic_chart(
+    ics=ics,
+    title="Barra Reversal Cumulative IC",
+    ic_type="Rank",
+    file_name=rank_chart_path,
+)
+sfp.generate_ic_chart(
+    ics=ics,
+    title="Barra Reversal Cumulative IC",
+    ic_type="Pearson",
+    file_name=pearson_chart_path,
+)
+
+# # Run parallelized backtest
+# run_backtest_parallel(
+#     data=alphas,
+#     signal_name=signal_name,
+#     constraints=constraints,
+#     gamma=gamma,
+#     n_cpus=n_cpus,
+# )
