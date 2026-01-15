@@ -15,8 +15,8 @@ load_dotenv()
 start = dt.date(2024, 1, 1)
 end = dt.date(2025, 12, 30)
 price_filter = 5
-signal_name = "barra_reversal"
-results_folder = Path("results/experiment_4")
+signal_name = "reversal"
+results_folder = Path("results/experiment_10")
 IC = 0.05
 gamma = 15
 n_cpus = 8
@@ -53,12 +53,7 @@ data = sfd.load_assets(
 
 # Compute signal
 signals = data.sort("barrid", "date").with_columns(
-    pl.col("specific_return")
-    .ewm_mean(span=5, min_samples=5)
-    .mul(-1)
-    .shift(1)
-    .over("barrid")
-    .alias(signal_name)
+    pl.col("return").log1p().rolling_sum(21).mul(-1).over("barrid").alias(signal_name)
 )
 
 # Filter universe
@@ -152,7 +147,7 @@ print(f"Active Risk: {active_risk * 100:.2}%")
 # Create summary table
 table = (
     gt.GT(all_weights.head(10))
-    .tab_header(title="Barra Reversal Portfolio")
+    .tab_header(title="Standard Reversal Portfolio")
     .cols_label(
         date="Date",
         ticker="Ticker",

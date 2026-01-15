@@ -15,12 +15,12 @@ load_dotenv()
 start = dt.date(1996, 1, 1)
 end = dt.date(2024, 12, 31)
 price_filter = 5
-signal_name = "barra_reversal"
+signal_name = "reversal"
 IC = 0.05
 gamma = 160
 n_cpus = 8
 constraints = ["ZeroBeta", "ZeroInvestment"]
-results_folder = Path("results/experiment_3")
+results_folder = Path("results/experiment_9")
 
 # Create results folder
 results_folder.mkdir(parents=True, exist_ok=True)
@@ -35,25 +35,18 @@ data = sfd.load_assets(
         "ticker",
         "price",
         "return",
-        "specific_return",
         "specific_risk",
         "predicted_beta",
     ],
     in_universe=True,
 ).with_columns(
     pl.col("return").truediv(100),
-    pl.col("specific_return").truediv(100),
     pl.col("specific_risk").truediv(100),
 )
 
 # Compute signal
 signals = data.sort("barrid", "date").with_columns(
-    pl.col("specific_return")
-    .ewm_mean(span=5, min_samples=5)
-    .mul(-1)
-    .shift(1)
-    .over("barrid")
-    .alias(signal_name)
+    pl.col("return").log1p().rolling_sum(21).mul(-1).over("barrid").alias(signal_name)
 )
 
 # Filter universe
@@ -110,13 +103,13 @@ rank_chart_path = results_folder / "rank_ic_chart.png"
 pearson_chart_path = results_folder / "pearson_ic_chart.png"
 sfp.generate_ic_chart(
     ics=ics,
-    title="Barra Reversal Cumulative IC",
+    title="Standard Reversal Cumulative IC",
     ic_type="Rank",
     file_name=rank_chart_path,
 )
 sfp.generate_ic_chart(
     ics=ics,
-    title="Barra Reversal Cumulative IC",
+    title="Standard Reversal Cumulative IC",
     ic_type="Pearson",
     file_name=pearson_chart_path,
 )

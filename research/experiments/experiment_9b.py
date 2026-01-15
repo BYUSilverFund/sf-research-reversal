@@ -10,9 +10,9 @@ import statsmodels.formula.api as smf
 # Parameters
 start = dt.date(1996, 1, 1)
 end = dt.date(2024, 12, 31)
-signal_name = "barra_reversal"
+signal_name = "reversal"
 gamma = 160
-results_folder = Path("results/experiment_3")
+results_folder = Path("results/experiment_9")
 
 # Create results folder
 results_folder.mkdir(parents=True, exist_ok=True)

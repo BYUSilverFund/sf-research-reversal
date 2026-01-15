@@ -40,8 +40,16 @@ Now all of your files will be formatted on commit (you will need to re-commit af
 6. Idiosyncratic + vol-scaled + smoothed reversal Windsorized portfolio check
 7. Idiosyncratic + vol-scaled + smoothed reversal Volume conditioned MVO backtest
 8. Idiosyncratic + vol-scaled + smoothed reversal Volume conditioned portfolio check 
+9. Standard reversal MVO backtest
+10. Standard reversal portfolio check
+11. Quantile regression of idiosyncratic + vol-scaled + smoothed reversal signal vs. returns
+
+## To do
+- Add FF5 regressions to 1, 5, 7
+- Add IC chart to 5, 7
+- Add vol- and beta- adjusted backtests to 1
 
 ## Responsibilities
 - Grant: 1
-- Brandon: 2, 3, 5, 7
-- Andrew: 4, 6, 8
+- Brandon: 2, 5, 7
+- Andrew: 3, 4, 6, 8, 9, 10, 11
