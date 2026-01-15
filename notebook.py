@@ -36,8 +36,20 @@ def _(mo):
     )
 
     signal_names = mo.ui.multiselect(
-        value=["reversal", "barra_reversal", "barra_reversal_clipped"],
-        options=["reversal", "barra_reversal", "barra_reversal_clipped"],
+        value=[
+            "reversal",
+            "barra_reversal",
+            "barra_reversal_clipped",
+            "barra_reversal_volume",
+            "barra_reversal_volume_clipped",
+        ],
+        options=[
+            "reversal",
+            "barra_reversal",
+            "barra_reversal_clipped",
+            "barra_reversal_volume",
+            "barra_reversal_volume_clipped",
+        ],
         label="Select signals",
     )
 
@@ -48,9 +60,13 @@ def _(mo):
 @app.cell
 def _(end, pl, signal_names, start):
     gammas = [
-        {"reversal": 160, "barra_reversal": 160, "barra_reversal_clipped": 130}[
-            signal_name
-        ]
+        {
+            "reversal": 160,
+            "barra_reversal": 160,
+            "barra_reversal_clipped": 130,
+            "barra_reversal_volume": 130,
+            "barra_reversal_volume_clipped": 150,
+        }[signal_name]
         for signal_name in signal_names.value
     ]
 
@@ -151,7 +167,7 @@ def _(gt, pl, portfolio_returns):
     )
 
     table = (
-        gt.GT(summary)
+        gt.GT(summary.sort("signal"))
         .tab_header(title="MVO Backtest Results (Active)")
         .cols_label(
             signal="Signal",
