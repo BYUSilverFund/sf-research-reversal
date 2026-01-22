@@ -117,6 +117,7 @@ alphas = (
     .with_columns(
         # Set alpha to 0 if both score > 2 and volume_score > 2
         alpha=pl.when((pl.col("score") > 2.0) & (pl.col("volume_score") > 2.0))
+        # alpha=pl.when(((pl.col("score") > 2.0) | (pl.col('score') < -2.0)) & (pl.col("volume_score") > 2.0)) # Andrew: I think this is the correct implementation
         .then(0.0)
         .otherwise(pl.col("gk_alpha"))
     )
