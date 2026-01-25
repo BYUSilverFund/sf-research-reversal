@@ -17,6 +17,7 @@ def barra_reversal_score() -> pl.Expr:
         pl.col("barra_reversal")
         .sub(pl.col("barra_reversal").mean())
         .truediv(pl.col("barra_reversal").std())
+        .over("date")
         .alias("barra_reversal_score")
     )
 
@@ -30,6 +31,7 @@ def dollar_volume_score() -> pl.Expr:
         pl.col("dollar_volume")
         .rolling_mean(window_size=252, min_samples=1)
         .truediv(pl.col("dollar_volume").rolling_std(window_size=252, min_samples=2))
+        .over("barrid")
         .alias("dolar_volume_score")
     )
 
