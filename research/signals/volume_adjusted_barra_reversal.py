@@ -17,6 +17,7 @@ def barra_reversal_score() -> pl.Expr:
         pl.col("barra_reversal")
         .sub(pl.col("barra_reversal").mean())
         .truediv(pl.col("barra_reversal").std())
+        .over("date")
         .alias("barra_reversal_score")
     )
 
@@ -28,9 +29,10 @@ def dollar_volume() -> pl.Expr:
 def dollar_volume_score() -> pl.Expr:
     return (
         pl.col("dollar_volume")
-        .rolling_mean(window_size=252, min_samples=1)
+        .sub(pl.col("dollar_volume").rolling_mean(window_size=252, min_samples=1))
         .truediv(pl.col("dollar_volume").rolling_std(window_size=252, min_samples=2))
-        .alias("dolar_volume_score")
+        .over("barrid")
+        .alias("dollar_volume_score")
     )
 
 
@@ -40,6 +42,6 @@ def volume_adjusted_barra_reversal() -> pl.Expr:
             pl.col("barra_reversal_score").gt(2) & pl.col("dollar_volume_score").gt(2)
         )
         .then(pl.lit(0))
-        .otherwise(pl.col("barra_reversal"))
-        .alias("volume_adjusted_barra_reversal")
+        .otherwise(pl.col("barra_reversal_score"))
+        .alias("volume_adjusted_barra_reversal_score")
     )

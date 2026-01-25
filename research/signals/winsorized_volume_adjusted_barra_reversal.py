@@ -29,31 +29,32 @@ def dollar_volume() -> pl.Expr:
 def dollar_volume_score() -> pl.Expr:
     return (
         pl.col("dollar_volume")
-        .rolling_mean(window_size=252, min_samples=1)
+        .sub(pl.col("dollar_volume").rolling_mean(window_size=252, min_samples=1))
         .truediv(pl.col("dollar_volume").rolling_std(window_size=252, min_samples=2))
         .over("barrid")
-        .alias("dolar_volume_score")
+        .alias("dollar_volume_score")
     )
 
 
-def volume_adjusted_barra_reversal() -> pl.Expr:
+def winsorized_barra_reversal() -> pl.Expr:
     return (
-        pl.when(
-            pl.col("barra_reversal_score").gt(2) & pl.col("dollar_volume_score").gt(2)
+        pl.col("barra_reversal_score")
+        .clip(
+            lower_bound=-2,
+            upper_bound=2,
         )
-        .then(pl.lit(0))
-        .otherwise(pl.col("barra_reversal"))
-        .alias("volume_adjusted_barra_reversal")
+        .over("date")
+        .alias("winsorized_barra_reversal_score")
     )
 
 
 def winsorized_volume_adjusted_barra_reversal() -> pl.Expr:
     return (
-        pl.col("volume_adjusted_barra_reversal")
-        .clip(
-            lower_bound=pl.col("volume_adjusted_barra_reversal").quantile(0.025),
-            upper_bound=pl.col("volume_adjusted_barra_reversal").quantile(0.975),
+        pl.when(
+            pl.col("winsorized_barra_reversal_score").gt(2)
+            & pl.col("dollar_volume_score").gt(2)
         )
-        .over("date")
-        .alias("winsorized_volume_adjusted_barra_reversal")
+        .then(pl.lit(0))
+        .otherwise(pl.col("barra_reversal_score"))
+        .alias("winsorized_volume_adjusted_barra_reversal_score")
     )

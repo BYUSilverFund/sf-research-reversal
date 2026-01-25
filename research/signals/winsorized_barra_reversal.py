@@ -12,13 +12,23 @@ def barra_reversal() -> pl.Expr:
     )
 
 
-def winsorized_barra_reversal() -> pl.Expr:
+def barra_reversal_score() -> pl.Expr:
     return (
         pl.col("barra_reversal")
+        .sub(pl.col("barra_reversal").mean())
+        .truediv(pl.col("barra_reversal").std())
+        .over("date")
+        .alias("barra_reversal_score")
+    )
+
+
+def winsorized_barra_reversal() -> pl.Expr:
+    return (
+        pl.col("barra_reversal_score")
         .clip(
-            lower_bound=pl.col("barra_reversal").quantile(0.025),
-            upper_bound=pl.col("barra_reversal").quantile(0.975),
+            lower_bound=-2,
+            upper_bound=2,
         )
         .over("date")
-        .alias("winsorized_barra_reversal")
+        .alias("winsorized_barra_reversal_score")
     )
