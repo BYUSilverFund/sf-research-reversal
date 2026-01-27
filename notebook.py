@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.19.2"
+__generated_with = "0.19.6"
 app = marimo.App(width="medium")
 
 
@@ -181,6 +181,40 @@ def _(gt, pl, portfolio_returns):
     )
 
     table
+    return
+
+
+@app.cell
+def _(pl, weights):
+    turnover = (
+        weights.sort("date", "barrid", "signal")
+        .with_columns(
+            pl.col("weight")
+            .sub(pl.col("weight").shift(1))
+            .over("barrid", "signal")
+            .alias("diff")
+        )
+        .group_by("date", "signal")
+        .agg(pl.col("diff").abs().sum().alias("two_sided_turnover"))
+        .sort("date", "signal")
+        .with_columns(pl.col("two_sided_turnover").rolling_mean(252).over("signal"))
+    )
+    return (turnover,)
+
+
+@app.cell
+def _(alt, turnover):
+    (
+        alt.Chart(turnover, title="MVO Backtest Results (Active)")
+        .mark_line()
+        .encode(
+            x=alt.X("date", title=""),
+            y=alt.Y(
+                "two_sided_turnover", title="Two-Sided Turnover (Rolling 252-Day Mean)"
+            ),
+            color=alt.Color("signal", title="Signal"),
+        )
+    )
     return
 
 
