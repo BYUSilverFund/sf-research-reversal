@@ -1,7 +1,7 @@
 import datetime as dt
 from pathlib import Path
 
-import great_tables as gt
+import altair as alt
 import polars as pl
 import sf_quant.data as sfd
 import statsmodels.formula.api as smf
@@ -85,64 +85,59 @@ forward_returns = (
     .drop_nulls("fwd_return")
 )
 
-# Merge alphas and forward returns
-regression_data = (
-    alphas.join(other=forward_returns, on=["date", "barrid"], how="inner")
-    .select("date", "barrid", "alpha", "fwd_return")
-    .with_columns(pl.col("alpha", "fwd_return").mul(100))
-    .filter(pl.col("date").eq(pl.col("date").max()))
+n_quantiles = 10
+quantiles = [str(i) for i in range(n_quantiles)]
+regression_data = alphas.join(
+    other=forward_returns, on=["date", "barrid"], how="inner"
+).with_columns(
+    pl.col("alpha").qcut(n_quantiles, labels=quantiles).over("date").alias("quantile")
 )
 
-# Add percentile rank for alpha
-regression_data = regression_data.with_columns(
-    pl.col("alpha").rank(method="average").truediv(pl.len()).mul(100).alias("alpha_pct")
-)
 
-# Run regressions for different distribution segments
-segment_results = []
-for lower_pct in range(90, 100, 1):
-    upper_pct = lower_pct + 1
+def fit_quantile_regression(regression_data: pl.DataFrame, quantiles: list[str]):
+    results_list = []
 
-    # Filter data for this segment
-    segment_data = regression_data.filter(
-        (pl.col("alpha_pct") >= lower_pct) & (pl.col("alpha_pct") < upper_pct)
-    )
+    for quantile in quantiles:
+        subset = regression_data.filter(pl.col("quantile").eq(quantile))
 
-    # Run regression
-    if len(segment_data) > 0:
-        model = smf.ols("fwd_return ~ alpha", data=segment_data)
-        results = model.fit()
+        model = smf.ols("fwd_return ~ alpha", subset).fit()
+        conf_int = model.conf_int()
 
-        # Extract coefficient and t-stat for alpha
-        alpha_coef = results.params["alpha"]
-        alpha_tstat = results.tvalues["alpha"]
-        n_obs = len(segment_data)
-
-        segment_results.append(
-            {
-                "segment": f"{lower_pct}-{upper_pct}",
-                "alpha_coef": alpha_coef,
-                "alpha_tstat": alpha_tstat,
-                "n_obs": n_obs,
-            }
+        results_list.append(
+            pl.DataFrame(
+                {
+                    "quantile": quantile,
+                    "coefficient": model.params["alpha"],
+                    "ci_lower": conf_int.loc["alpha", 0],
+                    "ci_upper": conf_int.loc["alpha", 1],
+                }
+            )
         )
 
-# Create polars dataframe with results
-results_df = pl.DataFrame(segment_results)
+    return pl.concat(results_list)
 
-table = (
-    gt.GT(results_df)
-    .tab_header(title="Quantile Regression Results")
-    .cols_label(
-        segment="Segment",
-        alpha_coef="Alpha Coefficient",
-        alpha_tstat="Alpha T-stat",
-        n_obs="# Observations",
+
+# Execute and visualize
+results = fit_quantile_regression(regression_data, quantiles)
+
+# Add error bars to show confidence intervals
+chart = (
+    alt.Chart(results)
+    .mark_line(point=True)
+    .encode(
+        x=alt.X("quantile", title="Quantile"),
+        y=alt.Y("coefficient", title="Alpha Coefficient"),
     )
-    .fmt_number(["alpha_coef", "alpha_tstat"], decimals=3)
-    .fmt_integer("n_obs")
-    .opt_stylize(style=4, color="gray")
+    .properties(width=800, height=400)
 )
 
-table_path = results_folder / "quantile_regression_table.png"
-table.save(table_path, scale=3)
+# Add error bars for confidence interval
+error_bars = (
+    alt.Chart(results)
+    .mark_errorbar()
+    .encode(x="quantile", y=alt.Y("ci_lower", title="Alpha Coefficient"), y2="ci_upper")
+)
+
+# Save chart
+chart_path = results_folder / "quantile_chart.png"
+(error_bars + chart).save(chart_path, scale_factor=3)
